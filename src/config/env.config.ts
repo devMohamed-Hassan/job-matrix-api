@@ -1,0 +1,22 @@
+export default () => ({
+  nodeEnv: process.env.NODE_ENV || "development",
+  port: Number(process.env.PORT || "5000"),
+  mongoUri: process.env.MONGO_URI || "mongodb://localhost:27017/job-matrix",
+  clientUrl: process.env.CLIENT_URL || "http://localhost:3000",
+  saltRounds: Number(process.env.SALT_ROUNDS || "10"),
+  emailUser: process.env.EMAIL_USER,
+  emailPass: process.env.EMAIL_PASS,
+  jwt: {
+    secret: process.env.ACCESS_TOKEN_SECRET,
+    refreshSecret: process.env.REFRESH_TOKEN_SECRET,
+  },
+  bearerKey: process.env.BEARER_KEY,
+  aws: {
+    region: process.env.AWS_REGION,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    s3BucketName: process.env.AWS_S3_BUCKET_NAME,
+  },
+  cryptoKey: process.env.CRYPTO_KEY || "default_32_character_crypto_key_1234",
+  mongoAtlsUri: process.env.MONGO_ATLS_URI,
+});
