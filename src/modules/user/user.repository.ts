@@ -25,7 +25,11 @@ export class UserRepository {
   }
 
   async findByEmailWithPassword(email: string): Promise<UserDocument | null> {
-    return this.userModel.findOne({ email, deletedAt: null }).select('+password').exec();
+    return this.userModel.findOne({ email, deletedAt: null }).select('+password +refreshTokenHash').exec();
+  }
+
+  async findByIdWithRefreshToken(id: string): Promise<UserDocument | null> {
+    return this.userModel.findById(id).select('+refreshTokenHash').exec();
   }
 
   async update(id: string, updateData: Partial<User>): Promise<UserDocument | null> {

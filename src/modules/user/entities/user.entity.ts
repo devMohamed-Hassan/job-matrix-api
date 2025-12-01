@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 export type UserDocument = User & Document;
 
@@ -21,13 +22,13 @@ export enum Role {
 
 export enum OtpType {
   CONFIRM_EMAIL = 'confirmEmail',
-  FORGET_PASSWORD = 'forgetPassword',
+  RESET_PASSWORD = 'resetPassword',
 }
 
 export interface Otp {
-  code: string;
+  value: string;
   type: OtpType;
-  expiresIn: Date;
+  expiresAt: Date;
 }
 
 export interface ImageData {
@@ -46,8 +47,8 @@ export class User {
   @Prop({ required: true, unique: true, lowercase: true })
   email: string;
 
-  @Prop({ required: true, select: false })
-  password: string;
+  @Prop({ select: false })
+  password?: string;
 
   @Prop({ enum: Provider, default: Provider.SYSTEM })
   provider: Provider;
@@ -57,29 +58,39 @@ export class User {
 
   @Prop({
     type: Date,
-    required: true,
+    required: false,
     validate: {
-      validator: function (value: Date) {
-        if (!value) return false;
+      validator: function (this: User & Document, value: Date | null | undefined) {
+        const provider = this.provider || Provider.SYSTEM;
+        if (provider === Provider.GOOGLE) {
+          return true;
+        }
+
+        if (!value) {
+          return false;
+        }
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const dob = new Date(value);
         dob.setHours(0, 0, 0, 0);
-        
+
         if (dob >= today) return false;
-        
+
         const age = today.getFullYear() - dob.getFullYear();
         const monthDiff = today.getMonth() - dob.getMonth();
         const dayDiff = today.getDate() - dob.getDate();
-        
-        const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
-        
+
+        const actualAge =
+          monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+
         return actualAge >= 18;
       },
-      message: 'Date of birth must be valid, in the past, and age must be at least 18 years',
+      message:
+        'Date of birth must be valid, in the past, and age must be at least 18 years',
     },
   })
-  DOB: Date;
+  DOB?: Date;
 
   @Prop()
   mobileNumber?: string;
@@ -88,7 +99,10 @@ export class User {
   role: Role;
 
   @Prop({ default: false })
-  isConfirmed: boolean;
+  emailConfirmed: boolean;
+
+  @Prop({ select: false })
+  refreshTokenHash?: string;
 
   @Prop({ type: Date, default: null })
   deletedAt: Date | null;
@@ -123,14 +137,14 @@ export class User {
   @Prop({
     type: [
       {
-        code: { type: String, required: true },
+        value: { type: String, required: true },
         type: { type: String, enum: Object.values(OtpType), required: true },
-        expiresIn: { type: Date, required: true },
+        expiresAt: { type: Date, required: true },
       },
     ],
     default: [],
   })
-  OTP: Otp[];
+  otp: Otp[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
@@ -140,18 +154,40 @@ UserSchema.virtual('username').get(function (this: UserDocument) {
 });
 
 UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    return next();
+  if (this.isModified('password') && this.password) {
+    try {
+      const saltRounds = Number(process.env.SALT_ROUNDS) || 10;
+      const hashedPassword = await bcrypt.hash(this.password, saltRounds);
+      this.password = hashedPassword;
+      this.changeCredentialTime = new Date();
+    } catch (error) {
+      return next(error);
+    }
   }
+  next();
+});
 
-  try {
-    const saltRounds = Number(process.env.SALT_ROUNDS) || 10;
-    const hashedPassword = await bcrypt.hash(this.password, saltRounds);
-    this.password = hashedPassword;
-    
-    this.changeCredentialTime = new Date();
-    next();
-  } catch (error) {
-    next(error);
+UserSchema.pre('save', async function (next) {
+  if (this.isModified('mobileNumber') && this.mobileNumber) {
+    try {
+      if (this.mobileNumber.includes(':')) {
+        return next();
+      }
+      
+      const cryptoKey = process.env.CRYPTO_KEY || 'default_32_character_crypto_key_1234';
+      const algorithm = 'aes-256-cbc';
+      const ivLength = 16;
+      const key = crypto.scryptSync(cryptoKey, 'salt', 32);
+      const iv = crypto.randomBytes(ivLength);
+      
+      const cipher = crypto.createCipheriv(algorithm, key, iv);
+      let encrypted = cipher.update(this.mobileNumber, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      
+      this.mobileNumber = iv.toString('hex') + ':' + encrypted;
+    } catch (error) {
+      return next(error);
+    }
   }
+  next();
 });
