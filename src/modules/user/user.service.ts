@@ -1,15 +1,27 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
 import { UserRepository } from './user.repository';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
-import { UserDocument } from './entities/user.entity';
+import { UpdateAccountDto } from './dtos/update-account.dto';
+import { UpdatePasswordDto } from './dtos/update-password.dto';
+import { UploadImageDto } from './dtos/upload-image.dto';
+import { UserDocument, ImageData } from './entities/user.entity';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly configService: ConfigService,
+  ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserDocument> {
-    // TODO: Implement user creation logic
     throw new Error('Method not implemented.');
   }
 
@@ -39,6 +51,183 @@ export class UserService {
 
   async remove(id: string): Promise<void> {
     await this.userRepository.delete(id);
+  }
+
+  async updateAccount(userId: string, updateAccountDto: UpdateAccountDto): Promise<UserDocument> {
+    const user = await this.userRepository.findByIdExcludingDeleted(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (updateAccountDto.firstName !== undefined) {
+      user.firstName = updateAccountDto.firstName;
+    }
+
+    if (updateAccountDto.lastName !== undefined) {
+      user.lastName = updateAccountDto.lastName;
+    }
+
+    if (updateAccountDto.gender !== undefined) {
+      user.gender = updateAccountDto.gender;
+    }
+
+    if (updateAccountDto.DOB !== undefined) {
+      user.DOB = new Date(updateAccountDto.DOB);
+    }
+
+    if (updateAccountDto.mobileNumber !== undefined) {
+      user.mobileNumber = updateAccountDto.mobileNumber;
+    }
+
+    await user.save();
+
+    return user;
+  }
+
+  async getCurrentUserAccount(userId: string): Promise<any> {
+    const user = await this.userRepository.findByIdExcludingDeleted(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const userObject = user.toObject();
+
+    delete userObject.password;
+    delete userObject.refreshTokenHash;
+    delete userObject.otp;
+
+    return userObject;
+  }
+
+  async getProfileData(userId: string): Promise<any> {
+    const user = await this.userRepository.findByIdExcludingDeleted(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const userObject = user.toObject();
+
+    return {
+      userName: `${userObject.firstName}${userObject.lastName}`,
+      mobileNumber: userObject.mobileNumber,
+      profilePic: userObject.profilePic,
+      coverPic: userObject.coverPic,
+    };
+  }
+
+  async updatePassword(userId: string, updatePasswordDto: UpdatePasswordDto): Promise<void> {
+    const user = await this.userRepository.findByIdWithPassword(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (!user.password) {
+      throw new BadRequestException('User does not have a password set');
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(
+      updatePasswordDto.currentPassword,
+      user.password,
+    );
+
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const saltRounds = Number(process.env.SALT_ROUNDS) || 10;
+    const hashedPassword = await bcrypt.hash(updatePasswordDto.newPassword, saltRounds);
+
+    await this.userRepository.update(userId, {
+      password: hashedPassword,
+      changeCredentialTime: new Date(),
+    });
+  }
+
+  async uploadProfilePic(userId: string, uploadImageDto: UploadImageDto): Promise<UserDocument> {
+    const user = await this.userRepository.findByIdExcludingDeleted(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const imageData: ImageData = {
+      secure_url: uploadImageDto.secure_url,
+      public_id: uploadImageDto.public_id,
+    };
+
+    const updatedUser = await this.userRepository.update(userId, {
+      profilePic: imageData,
+    });
+
+    if (!updatedUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    return updatedUser;
+  }
+
+  async uploadCoverPic(userId: string, uploadImageDto: UploadImageDto): Promise<UserDocument> {
+    const user = await this.userRepository.findByIdExcludingDeleted(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const imageData: ImageData = {
+      secure_url: uploadImageDto.secure_url,
+      public_id: uploadImageDto.public_id,
+    };
+
+    const updatedUser = await this.userRepository.update(userId, {
+      coverPic: imageData,
+    });
+
+    if (!updatedUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    return updatedUser;
+  }
+
+  async deleteProfilePic(userId: string): Promise<UserDocument> {
+    const user = await this.userRepository.findByIdExcludingDeleted(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const updatedUser = await this.userRepository.update(userId, {
+      profilePic: null,
+    });
+
+    if (!updatedUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    return updatedUser;
+  }
+
+  async deleteCoverPic(userId: string): Promise<UserDocument> {
+    const user = await this.userRepository.findByIdExcludingDeleted(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const updatedUser = await this.userRepository.update(userId, {
+      coverPic: null,
+    });
+
+    if (!updatedUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    return updatedUser;
+  }
+
+  async softDeleteAccount(userId: string): Promise<void> {
+    const user = await this.userRepository.findByIdExcludingDeleted(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    await this.userRepository.softDelete(userId);
   }
 }
 

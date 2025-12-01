@@ -36,7 +36,46 @@ export interface ImageData {
   public_id: string;
 }
 
-@Schema({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
+const DEFAULT_CRYPTO_KEY = 'default_32_character_crypto_key_1234';
+const CRYPTO_ALGORITHM = 'aes-256-cbc';
+
+function decryptMobile(value?: string | null): string | null | undefined {
+  if (!value || !value.includes(':')) {
+    return value;
+  }
+
+  try {
+    const cryptoKey = process.env.CRYPTO_KEY || DEFAULT_CRYPTO_KEY;
+    const key = crypto.scryptSync(cryptoKey, 'salt', 32);
+    const [ivHex, encrypted] = value.split(':');
+    const iv = Buffer.from(ivHex, 'hex');
+
+    const decipher = crypto.createDecipheriv(CRYPTO_ALGORITHM, key, iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (error) {
+    return value;
+  }
+}
+
+@Schema({
+  timestamps: true,
+  toJSON: {
+    virtuals: true,
+    transform: (_doc, ret) => {
+      ret.mobileNumber = decryptMobile(ret.mobileNumber);
+      return ret;
+    },
+  },
+  toObject: {
+    virtuals: true,
+    transform: (_doc, ret) => {
+      ret.mobileNumber = decryptMobile(ret.mobileNumber);
+      return ret;
+    },
+  },
+})
 export class User {
   @Prop({ required: true })
   firstName: string;

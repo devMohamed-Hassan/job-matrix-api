@@ -43,5 +43,21 @@ export class UserRepository {
   async findAll(): Promise<UserDocument[]> {
     return this.userModel.find().exec();
   }
+
+  async findByIdWithPassword(id: string): Promise<UserDocument | null> {
+    return this.userModel.findById(id).select('+password').exec();
+  }
+
+  async findByIdExcludingDeleted(id: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({ _id: id, deletedAt: null }).exec();
+  }
+
+  async softDelete(id: string): Promise<UserDocument | null> {
+    return this.userModel.findByIdAndUpdate(
+      id,
+      { deletedAt: new Date() },
+      { new: true },
+    ).exec();
+  }
 }
 
