@@ -4,6 +4,8 @@ import { AppModule } from "./app.module";
 import { ConfigService } from "@nestjs/config";
 import { getConnectionToken } from "@nestjs/mongoose";
 import { Connection } from "mongoose";
+import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
+import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -18,6 +20,9 @@ async function bootstrap() {
       transform: true,
     })
   );
+
+  app.useGlobalInterceptors(new ResponseInterceptor());
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   app.enableCors();
 
