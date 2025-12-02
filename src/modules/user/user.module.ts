@@ -9,6 +9,7 @@ import { UserRepository } from './user.repository';
 import { User, UserSchema } from './entities/user.entity';
 import { JwtStrategy } from '../auth/strategies/jwt.strategy';
 import { getJwtConfig } from '../../config/jwt.config';
+import { S3Service } from '../../common/services/s3.service';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { getJwtConfig } from '../../config/jwt.config';
     }),
   ],
   controllers: [UserController],
-  providers: [UserService, UserRepository, JwtStrategy],
+  providers: [UserService, UserRepository, JwtStrategy, S3Service],
   exports: [UserService, UserRepository],
 })
 export class UserModule {}
