@@ -6,12 +6,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { unlink } from 'fs/promises';
 import { UserRepository } from './user.repository';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UpdateAccountDto } from './dtos/update-account.dto';
 import { UpdatePasswordDto } from './dtos/update-password.dto';
-import { UploadImageDto } from './dtos/upload-image.dto';
 import { UserDocument, ImageData } from './entities/user.entity';
 
 @Injectable()
@@ -143,15 +143,27 @@ export class UserService {
     });
   }
 
-  async uploadProfilePic(userId: string, uploadImageDto: UploadImageDto): Promise<UserDocument> {
+  async uploadProfilePic(userId: string, file: Express.Multer.File): Promise<UserDocument> {
     const user = await this.userRepository.findByIdExcludingDeleted(userId);
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
+    if (user.profilePic?.secure_url) {
+      try {
+        const oldFilePath = user.profilePic.secure_url;
+        if (oldFilePath.startsWith('uploads/profile/')) {
+          await unlink(oldFilePath).catch(() => {
+          });
+        }
+      } catch (error) {
+      }
+    }
+
+    const filePath = file.path;
     const imageData: ImageData = {
-      secure_url: uploadImageDto.secure_url,
-      public_id: uploadImageDto.public_id,
+      secure_url: filePath,
+      public_id: file.filename,
     };
 
     const updatedUser = await this.userRepository.update(userId, {
@@ -165,15 +177,27 @@ export class UserService {
     return updatedUser;
   }
 
-  async uploadCoverPic(userId: string, uploadImageDto: UploadImageDto): Promise<UserDocument> {
+  async uploadCoverPic(userId: string, file: Express.Multer.File): Promise<UserDocument> {
     const user = await this.userRepository.findByIdExcludingDeleted(userId);
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
+    if (user.coverPic?.secure_url) {
+      try {
+        const oldFilePath = user.coverPic.secure_url;
+        if (oldFilePath.startsWith('uploads/cover/')) {
+          await unlink(oldFilePath).catch(() => {
+          });
+        }
+      } catch (error) {
+      }
+    }
+
+    const filePath = file.path;
     const imageData: ImageData = {
-      secure_url: uploadImageDto.secure_url,
-      public_id: uploadImageDto.public_id,
+      secure_url: filePath,
+      public_id: file.filename,
     };
 
     const updatedUser = await this.userRepository.update(userId, {
@@ -193,6 +217,17 @@ export class UserService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
+    if (user.profilePic?.secure_url) {
+      try {
+        const filePath = user.profilePic.secure_url;
+        if (filePath.startsWith('uploads/profile/')) {
+          await unlink(filePath).catch(() => {
+          });
+        }
+      } catch (error) {
+      }
+    }
+
     const updatedUser = await this.userRepository.update(userId, {
       profilePic: null,
     });
@@ -208,6 +243,17 @@ export class UserService {
     const user = await this.userRepository.findByIdExcludingDeleted(userId);
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (user.coverPic?.secure_url) {
+      try {
+        const filePath = user.coverPic.secure_url;
+        if (filePath.startsWith('uploads/cover/')) {
+          await unlink(filePath).catch(() => {
+          });
+        }
+      } catch (error) {
+      }
     }
 
     const updatedUser = await this.userRepository.update(userId, {
