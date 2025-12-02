@@ -3,6 +3,7 @@ export default () => ({
   port: Number(process.env.PORT || "5000"),
   mongoUri: process.env.MONGO_URI || "mongodb://localhost:27017/job-matrix",
   clientUrl: process.env.CLIENT_URL || "http://localhost:3000",
+  apiUrl: process.env.API_URL || "http://localhost:5000",
   saltRounds: Number(process.env.SALT_ROUNDS || "10"),
   emailUser: process.env.EMAIL_USER,
   emailPass: process.env.EMAIL_PASS,

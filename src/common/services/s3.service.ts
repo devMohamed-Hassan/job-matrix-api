@@ -4,13 +4,14 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 import { extname } from "path";
 
 export interface S3UploadResult {
-  url: string;
-  key: string;
+  secure_url: string;
+  public_id: string;
 }
 
 @Injectable()
@@ -78,13 +79,14 @@ export class S3Service {
 
       await this.s3Client.send(command);
 
-      const url = this.getPublicUrl(key);
+      const apiUrl = this.configService.get<string>("apiUrl") || "http://localhost:5000";
+      const proxyUrl = `${apiUrl}/assets/${key}`;
 
       this.logger.log(`Successfully uploaded ${key} to S3`);
 
       return {
-        url,
-        key,
+        secure_url: proxyUrl,
+        public_id: key,
       };
     } catch (error) {
       this.logger.error(
@@ -121,6 +123,14 @@ export class S3Service {
     }
   }
 
+  async getAsset({ key }: { key: string }) {
+    const command = new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+    });
+    return await this.s3Client.send(command);
+  }
+
   private getPublicUrl(key: string): string {
     if (this.region === "us-east-1") {
       return `https://${this.bucketName}.s3.amazonaws.com/${key}`;
@@ -134,6 +144,15 @@ export class S3Service {
       return null;
     }
 
+    // Try to extract from proxy URL first (e.g., http://localhost:5000/assets/profile/file.jpg)
+    const apiUrl = this.configService.get<string>("apiUrl") || "http://localhost:5000";
+    const proxyUrlPattern = new RegExp(`${apiUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/assets/(.+)`);
+    const proxyMatch = url.match(proxyUrlPattern);
+    if (proxyMatch) {
+      return proxyMatch[1];
+    }
+
+    // Fallback to S3 URL pattern for backward compatibility
     let s3UrlPattern: RegExp;
     if (this.region === "us-east-1") {
       s3UrlPattern = new RegExp(

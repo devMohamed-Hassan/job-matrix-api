@@ -177,8 +177,8 @@ export class UserService {
     );
 
     const imageData: ImageData = {
-      secure_url: uploadResult.url,
-      public_id: uploadResult.key,
+      secure_url: uploadResult.secure_url,
+      public_id: uploadResult.public_id,
     };
 
     const updatedUser = await this.userRepository.update(userId, {
@@ -213,8 +213,8 @@ export class UserService {
     );
 
     const imageData: ImageData = {
-      secure_url: uploadResult.url,
-      public_id: uploadResult.key,
+      secure_url: uploadResult.secure_url,
+      public_id: uploadResult.public_id,
     };
 
     const updatedUser = await this.userRepository.update(userId, {

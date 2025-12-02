@@ -10,6 +10,7 @@ import { JobModule } from './modules/job/job.module';
 import { ApplicationModule } from './modules/application/application.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { AssetsModule } from './modules/assets/assets.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AdminModule } from './modules/admin/admin.module';
     ApplicationModule,
     ChatModule,
     AdminModule,
+    AssetsModule,
   ],
   controllers: [],
   providers: [],
