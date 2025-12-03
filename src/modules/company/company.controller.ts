@@ -19,7 +19,10 @@ import { UpdateCompanyDto } from './dtos/update-company.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CompanyOwnerGuard } from '../../common/guards/company-owner.guard';
 import { AdminOrOwnerGuard } from '../../common/guards/admin-or-owner.guard';
-import { CurrentUser, CurrentUserPayload } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  CurrentUserPayload,
+} from '../../common/decorators/current-user.decorator';
 import { createMulterConfig } from '../../config/multer.config';
 
 @Controller('companies')
@@ -28,11 +31,23 @@ export class CompanyController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
+  @UseInterceptors(
+    FileInterceptor('legalAttachment', createMulterConfig('legal')),
+  )
   async create(
     @Body() createCompanyDto: CreateCompanyDto,
     @CurrentUser() user: CurrentUserPayload,
+    @UploadedFile() legalAttachment: Express.Multer.File,
   ) {
-    return this.companyService.create(createCompanyDto, user.userId);
+    if (!legalAttachment) {
+      throw new BadRequestException('Legal attachment is required');
+    }
+
+    return this.companyService.create(
+      createCompanyDto,
+      user.userId,
+      legalAttachment,
+    );
   }
 
   @UseGuards(JwtAuthGuard, CompanyOwnerGuard)

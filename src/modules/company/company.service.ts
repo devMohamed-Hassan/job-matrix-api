@@ -22,6 +22,7 @@ export class CompanyService {
   async create(
     createCompanyDto: CreateCompanyDto,
     userId: string,
+    legalAttachment: Express.Multer.File,
   ): Promise<CompanyDocument> {
     const existingByEmail = await this.companyRepository.findByEmail(
       createCompanyDto.companyEmail,
@@ -49,7 +50,25 @@ export class CompanyService {
       approvedByAdmin: false,
     };
 
-    return this.companyRepository.create(companyData);
+    const company = await this.companyRepository.create(companyData);
+
+    const uploadResult = await this.s3Service.uploadCompanyImage(
+      legalAttachment,
+      'legal',
+      company._id.toString(),
+    );
+
+    const updatedCompany = await this.companyRepository.update(
+      company._id.toString(),
+      {
+        legalAttachment: {
+          secure_url: uploadResult.secure_url,
+          public_id: uploadResult.public_id,
+        },
+      },
+    );
+
+    return updatedCompany ?? company;
   }
 
   async update(
