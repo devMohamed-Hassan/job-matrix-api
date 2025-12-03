@@ -144,7 +144,6 @@ export class S3Service {
       return null;
     }
 
-    // Try to extract from proxy URL first (e.g., http://localhost:5000/assets/profile/file.jpg)
     const apiUrl = this.configService.get<string>("apiUrl") || "http://localhost:5000";
     const proxyUrlPattern = new RegExp(`${apiUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/assets/(.+)`);
     const proxyMatch = url.match(proxyUrlPattern);
@@ -152,7 +151,6 @@ export class S3Service {
       return proxyMatch[1];
     }
 
-    // Fallback to S3 URL pattern for backward compatibility
     let s3UrlPattern: RegExp;
     if (this.region === "us-east-1") {
       s3UrlPattern = new RegExp(

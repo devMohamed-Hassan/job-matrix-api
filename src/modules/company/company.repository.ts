@@ -18,12 +18,44 @@ export class CompanyRepository {
     return this.companyModel.findById(id).exec();
   }
 
+  async findByIdExcludingDeleted(
+    id: string,
+  ): Promise<CompanyDocument | null> {
+    return this.companyModel.findOne({ _id: id, deletedAt: null }).exec();
+  }
+
   async findByEmail(email: string): Promise<CompanyDocument | null> {
-    return this.companyModel.findOne({ email }).exec();
+    return this.companyModel
+      .findOne({ companyEmail: email.toLowerCase(), deletedAt: null })
+      .exec();
+  }
+
+  async findByName(name: string): Promise<CompanyDocument | null> {
+    return this.companyModel
+      .findOne({ companyName: name.trim(), deletedAt: null })
+      .exec();
+  }
+
+  async searchByName(searchTerm: string): Promise<CompanyDocument[]> {
+    return this.companyModel
+      .find({
+        companyName: { $regex: searchTerm, $options: 'i' },
+        deletedAt: null,
+      })
+      .exec();
+  }
+
+  async findByIdWithJobs(id: string): Promise<CompanyDocument | null> {
+    return this.companyModel
+      .findOne({ _id: id, deletedAt: null })
+      .populate('jobs')
+      .exec();
   }
 
   async findByOwnerId(ownerId: string): Promise<CompanyDocument[]> {
-    return this.companyModel.find({ ownerId }).exec();
+    return this.companyModel
+      .find({ createdBy: ownerId, deletedAt: null })
+      .exec();
   }
 
   async update(
@@ -35,12 +67,22 @@ export class CompanyRepository {
       .exec();
   }
 
+  async softDelete(id: string): Promise<CompanyDocument | null> {
+    return this.companyModel
+      .findByIdAndUpdate(
+        id,
+        { deletedAt: new Date() },
+        { new: true },
+      )
+      .exec();
+  }
+
   async delete(id: string): Promise<void> {
     await this.companyModel.findByIdAndDelete(id).exec();
   }
 
   async findAll(): Promise<CompanyDocument[]> {
-    return this.companyModel.find().exec();
+    return this.companyModel.find({ deletedAt: null }).exec();
   }
 }
 
