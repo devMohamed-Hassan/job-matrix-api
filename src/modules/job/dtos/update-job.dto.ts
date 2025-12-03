@@ -1,37 +1,52 @@
-import { IsString, IsOptional, IsArray, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsEnum, IsBoolean, MinLength } from 'class-validator';
+import {
+  JobLocation,
+  WorkingTime,
+  SeniorityLevel,
+} from '../entities/job.entity';
 
 export class UpdateJobDto {
   @IsString()
   @IsOptional()
-  title?: string;
+  @MinLength(3)
+  jobTitle?: string;
+
+  @IsEnum(JobLocation, {
+    message: 'jobLocation must be one of: onsite, remotely, hybrid',
+  })
+  @IsOptional()
+  jobLocation?: JobLocation;
+
+  @IsEnum(WorkingTime, {
+    message: 'workingTime must be one of: part-time, full-time',
+  })
+  @IsOptional()
+  workingTime?: WorkingTime;
+
+  @IsEnum(SeniorityLevel, {
+    message:
+      'seniorityLevel must be one of: fresh, junior, mid-level, senior, team-lead, cto',
+  })
+  @IsOptional()
+  seniorityLevel?: SeniorityLevel;
 
   @IsString()
   @IsOptional()
-  description?: string;
+  @MinLength(50)
+  jobDescription?: string;
 
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
-  requirements?: string[];
+  technicalSkills?: string[];
 
-  @IsString()
+  @IsArray()
+  @IsString({ each: true })
   @IsOptional()
-  location?: string;
+  softSkills?: string[];
 
-  @IsString()
+  @IsBoolean()
   @IsOptional()
-  salary?: string;
-
-  @IsEnum(['full-time', 'part-time', 'contract', 'internship'])
-  @IsOptional()
-  type?: string;
-
-  @IsEnum(['remote', 'on-site', 'hybrid'])
-  @IsOptional()
-  workMode?: string;
-
-  @IsEnum(['active', 'closed', 'draft'])
-  @IsOptional()
-  status?: string;
+  closed?: boolean;
 }
 

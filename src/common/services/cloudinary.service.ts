@@ -155,6 +155,71 @@ export class CloudinaryService {
     }
   }
 
+  async uploadCV(
+    file: Express.Multer.File,
+    folder: string = 'cv',
+  ): Promise<CloudinaryUploadResult> {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+
+    if (file.mimetype !== 'application/pdf') {
+      throw new BadRequestException(
+        'Invalid file type. Only PDF files are allowed for CV.',
+      );
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new BadRequestException('CV file size exceeds 5MB limit');
+    }
+
+    try {
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: folder,
+            resource_type: 'raw',
+            allowed_formats: ['pdf'],
+            format: 'pdf',
+          },
+          (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
+            if (error) {
+              this.logger.error(
+                `Failed to upload CV to Cloudinary: ${error.message}`,
+                error.stack,
+              );
+              reject(
+                new BadRequestException(`Failed to upload CV: ${error.message}`),
+              );
+              return;
+            }
+
+            if (!result) {
+              reject(new BadRequestException('Upload failed: No result returned'));
+              return;
+            }
+
+            this.logger.log(`Successfully uploaded CV ${result.public_id} to Cloudinary`);
+
+            resolve({
+              secure_url: result.secure_url,
+              public_id: result.public_id,
+            });
+          },
+        );
+
+        uploadStream.end(file.buffer);
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to upload CV to Cloudinary: ${error.message}`,
+        error.stack,
+      );
+      throw new BadRequestException(`Failed to upload CV: ${error.message}`);
+    }
+  }
+
   async deleteFile(publicId: string): Promise<void> {
     if (!publicId) {
       return;

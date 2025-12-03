@@ -1,40 +1,79 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export type JobDocument = Job & Document;
 
+export enum JobLocation {
+  ONSITE = 'onsite',
+  REMOTELY = 'remotely',
+  HYBRID = 'hybrid',
+}
+
+export enum WorkingTime {
+  PART_TIME = 'part-time',
+  FULL_TIME = 'full-time',
+}
+
+export enum SeniorityLevel {
+  FRESH = 'fresh',
+  JUNIOR = 'junior',
+  MID_LEVEL = 'mid-level',
+  SENIOR = 'senior',
+  TEAM_LEAD = 'team-lead',
+  CTO = 'cto',
+}
+
 @Schema({ timestamps: true })
 export class Job {
-  @Prop({ required: true })
-  title: string;
+  @Prop({ required: true, trim: true, index: true })
+  jobTitle: string;
+
+  @Prop({
+    required: true,
+    enum: JobLocation,
+    index: true,
+  })
+  jobLocation: JobLocation;
+
+  @Prop({
+    required: true,
+    enum: WorkingTime,
+    index: true,
+  })
+  workingTime: WorkingTime;
+
+  @Prop({
+    required: true,
+    enum: SeniorityLevel,
+    index: true,
+  })
+  seniorityLevel: SeniorityLevel;
 
   @Prop({ required: true })
-  description: string;
+  jobDescription: string;
 
-  @Prop({ required: true })
-  requirements: string[];
+  @Prop({ type: [String], default: [] })
+  technicalSkills: string[];
 
-  @Prop({ required: true })
-  location: string;
+  @Prop({ type: [String], default: [] })
+  softSkills: string[];
 
-  @Prop()
-  salary?: string;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  addedBy: Types.ObjectId;
 
-  @Prop({ required: true, enum: ['full-time', 'part-time', 'contract', 'internship'] })
-  type: string;
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  updatedBy: Types.ObjectId | null;
 
-  @Prop({ required: true, enum: ['remote', 'on-site', 'hybrid'] })
-  workMode: string;
+  @Prop({ default: false, index: true })
+  closed: boolean;
 
-  @Prop({ type: String, ref: 'Company', required: true })
-  companyId: string;
-
-  @Prop({ default: 'active', enum: ['active', 'closed', 'draft'] })
-  status: string;
-
-  @Prop({ default: 0 })
-  applicationCount: number;
+  @Prop({ type: Types.ObjectId, ref: 'Company', required: true, index: true })
+  companyId: Types.ObjectId;
 }
 
 export const JobSchema = SchemaFactory.createForClass(Job);
+
+JobSchema.index({ companyId: 1, closed: 1 });
+JobSchema.index({ jobLocation: 1, workingTime: 1, seniorityLevel: 1 });
+JobSchema.index({ jobTitle: 'text', jobDescription: 'text' });
 

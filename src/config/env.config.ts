@@ -7,6 +7,8 @@ export default () => ({
   saltRounds: Number(process.env.SALT_ROUNDS || "10"),
   emailUser: process.env.EMAIL_USER,
   emailPass: process.env.EMAIL_PASS,
+  emailHost: process.env.EMAIL_HOST,
+  emailPort: Number(process.env.EMAIL_PORT || "587"),
   jwt: {
     secret: process.env.ACCESS_TOKEN_SECRET,
     refreshSecret: process.env.REFRESH_TOKEN_SECRET,
@@ -18,6 +20,12 @@ export default () => ({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     s3BucketName: process.env.AWS_S3_BUCKET_NAME,
   },
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    apiKey: process.env.CLOUDINARY_API_KEY,
+    apiSecret: process.env.CLOUDINARY_API_SECRET,
+  },
+  socketPort: Number(process.env.SOCKET_PORT || "5001"),
   cryptoKey: process.env.CRYPTO_KEY || "default_32_character_crypto_key_1234",
   mongoAtlsUri: process.env.MONGO_ATLS_URI,
 });

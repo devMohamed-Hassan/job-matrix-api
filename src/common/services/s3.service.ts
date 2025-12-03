@@ -175,6 +175,60 @@ export class S3Service {
     }
   }
 
+  async uploadCV(
+    file: Express.Multer.File,
+    folder: string = "cv",
+  ): Promise<S3UploadResult> {
+    if (!file) {
+      throw new BadRequestException("No file provided");
+    }
+
+    if (file.mimetype !== "application/pdf") {
+      throw new BadRequestException(
+        "Invalid file type. Only PDF files are allowed for CV.",
+      );
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new BadRequestException("CV file size exceeds 5MB limit");
+    }
+
+    try {
+      const fileExtension = extname(file.originalname).toLowerCase() || ".pdf";
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 15);
+      const fileName = `cv-${timestamp}-${randomString}${fileExtension}`;
+      const key = `${folder}/${fileName}`;
+
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      });
+
+      await this.s3Client.send(command);
+
+      const apiUrl =
+        this.configService.get<string>("apiUrl") || "http://localhost:5000";
+      const proxyUrl = `${apiUrl}/assets/${key}`;
+
+      this.logger.log(`Successfully uploaded CV ${key} to S3`);
+
+      return {
+        secure_url: proxyUrl,
+        public_id: key,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to upload CV to S3: ${error.message}`,
+        error.stack
+      );
+      throw new BadRequestException(`Failed to upload CV: ${error.message}`);
+    }
+  }
+
   async deleteImage(key: string): Promise<void> {
     if (!key) {
       return;
