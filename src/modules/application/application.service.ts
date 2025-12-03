@@ -74,7 +74,10 @@ export class ApplicationService {
       application._id.toString(),
     );
 
-    const companyId = job.companyId.toString();
+    const companyId = 
+      job.companyId && typeof job.companyId === 'object' && '_id' in job.companyId
+        ? (job.companyId as any)._id.toString()
+        : job.companyId.toString();
 
     if (populatedApplication) {
       const populatedUserId = populatedApplication.userId as any;
@@ -149,11 +152,34 @@ export class ApplicationService {
     ) {
       const applicant = updatedApplication.userId as any;
       const job = updatedApplication.jobId as any;
-      const companyId = job.companyId?.toString() || job.companyId;
+      
+      if (!job.companyId) {
+        throw new NotFoundException('Company ID not found for this job');
+      }
+      
+      let companyId: string;
+      const companyIdValue = job.companyId as any;
+      
+      if (companyIdValue && typeof companyIdValue === 'object') {
+        if (companyIdValue._id) {
+          companyId = companyIdValue._id.toString();
+        } else if (companyIdValue.id && typeof companyIdValue.id === 'string') {
+          companyId = companyIdValue.id;
+        } else if (Types.ObjectId.isValid(companyIdValue)) {
+          companyId = companyIdValue.toString();
+        } else {
+          throw new NotFoundException('Invalid company ID format');
+        }
+      } else if (typeof companyIdValue === 'string') {
+        companyId = companyIdValue;
+      } else {
+        throw new NotFoundException('Invalid company ID format');
+      }
       
       const company = await this.companyRepository.findByIdExcludingDeleted(
         companyId,
       );
+      
 
       if (applicant && applicant.email && job && company) {
         try {

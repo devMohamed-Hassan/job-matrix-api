@@ -33,8 +33,13 @@ export class JobOwnerGuard implements CanActivate {
       throw new NotFoundException(`Job with ID ${jobId} not found`);
     }
 
+    const companyIdValue = 
+      job.companyId && typeof job.companyId === 'object' && '_id' in job.companyId
+        ? (job.companyId as any)._id.toString()
+        : job.companyId.toString();
+
     const company = await this.companyRepository.findByIdExcludingDeleted(
-      job.companyId.toString(),
+      companyIdValue,
     );
 
     if (!company) {

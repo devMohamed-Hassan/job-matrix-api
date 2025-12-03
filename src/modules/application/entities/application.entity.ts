@@ -44,8 +44,6 @@ export class Application {
 
 export const ApplicationSchema = SchemaFactory.createForClass(Application);
 
-// Create compound index to prevent duplicate applications
 ApplicationSchema.index({ userId: 1, jobId: 1 }, { unique: true });
 
-// Index for filtering by status and job
 ApplicationSchema.index({ jobId: 1, status: 1 });
