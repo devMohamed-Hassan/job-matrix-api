@@ -1,28 +1,58 @@
 import {
   Controller,
   Get,
-  Post,
-  Body,
+  Patch,
+  Delete,
   Param,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
-import { CreateMessageDto } from './dtos/create-message.dto';
+import { PaginationDto } from './dtos/pagination.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import {
+  CurrentUser,
+  CurrentUserPayload,
+} from '../../common/decorators/current-user.decorator';
 
 @Controller('chat')
+@UseGuards(JwtAuthGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
-
-  @Post()
-  create(@Body() createMessageDto: CreateMessageDto) {
-    // TODO: Extract senderId from authenticated user
-    return this.chatService.create(createMessageDto, '');
+  @Get('history/:userId')
+  async getChatHistory(
+    @Param('userId') targetUserId: string,
+    @Query() pagination: PaginationDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.chatService.getChatHistory(
+      user.userId,
+      targetUserId,
+      pagination,
+    );
   }
 
-  @Get('conversation/:userId')
-  getConversation(@Param('userId') userId: string) {
-    // TODO: Extract current userId from authenticated user
-    return this.chatService.getConversation('', userId);
+  @Get('conversations')
+  async getConversations(
+    @Query() pagination: PaginationDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.chatService.getConversations(user.userId, pagination);
+  }
+
+  @Patch('conversations/:conversationId/read')
+  async markMessagesAsRead(
+    @Param('conversationId') conversationId: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.chatService.markMessagesAsRead(conversationId, user.userId);
+  }
+  
+  @Delete('conversations/:conversationId')
+  async deleteConversation(
+    @Param('conversationId') conversationId: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.chatService.deleteConversation(conversationId, user.userId);
   }
 }
-
