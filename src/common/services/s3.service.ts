@@ -6,7 +6,6 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
-import { v4 as uuidv4 } from "uuid";
 import { extname } from "path";
 
 export interface S3UploadResult {
@@ -44,7 +43,7 @@ export class S3Service {
     });
   }
 
-  async uploadImage(
+  async uploadUserImage(
     file: Express.Multer.File,
     folder: "profile" | "cover",
     userId: string
@@ -66,9 +65,10 @@ export class S3Service {
     }
 
     try {
-      const fileExtension = extname(file.originalname).toLowerCase();
-      const fileName = `${userId}-${uuidv4()}${fileExtension}`;
-      const key = `${folder}/${fileName}`;
+      const fileExtension = extname(file.originalname).toLowerCase() || ".jpg";
+      const timestamp = Date.now();
+      const fileName = `${folder}-${timestamp}${fileExtension}`;
+      const key = `users/${userId}/${folder}/${fileName}`;
 
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
@@ -97,13 +97,86 @@ export class S3Service {
     }
   }
 
-  async deleteImage(key: string): Promise<void> {
-    if (!key) {
-      return;
+  async uploadCompanyImage(
+    file: Express.Multer.File,
+    folder: "logo" | "cover" | "legal",
+    companyId: string
+  ): Promise<S3UploadResult> {
+    if (!file) {
+      throw new BadRequestException("No file provided");
     }
 
-    if (!key.startsWith("profile/") && !key.startsWith("cover/")) {
-      this.logger.warn(`Skipping deletion of non-S3 key: ${key}`);
+    const isLegalFolder = folder === "legal";
+
+    const allowedMimesForImages = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+    ];
+
+    const allowedMimesForLegal = [
+      "application/pdf",
+      ...allowedMimesForImages,
+    ];
+
+    const allowedMimes = isLegalFolder
+      ? allowedMimesForLegal
+      : allowedMimesForImages;
+
+    if (!allowedMimes.includes(file.mimetype)) {
+      throw new BadRequestException(
+        isLegalFolder
+          ? "Invalid file type. Only PDF, JPEG, PNG, and WebP files are allowed for legal documents."
+          : "Invalid file type. Only JPEG, PNG, and WebP images are allowed."
+      );
+    }
+
+    const maxSize = isLegalFolder ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new BadRequestException(
+        isLegalFolder
+          ? "File size exceeds 10MB limit"
+          : "File size exceeds 5MB limit"
+      );
+    }
+
+    try {
+      const fileExtension = extname(file.originalname).toLowerCase() || ".bin";
+      const timestamp = Date.now();
+      const fileName = `${folder}-${timestamp}${fileExtension}`;
+      const key = `companies/${companyId}/${folder}/${fileName}`;
+
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      });
+
+      await this.s3Client.send(command);
+
+      const apiUrl =
+        this.configService.get<string>("apiUrl") || "http://localhost:5000";
+      const proxyUrl = `${apiUrl}/assets/${key}`;
+
+      this.logger.log(`Successfully uploaded ${key} to S3`);
+
+      return {
+        secure_url: proxyUrl,
+        public_id: key,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to upload file to S3: ${error.message}`,
+        error.stack
+      );
+      throw new BadRequestException(`Failed to upload image: ${error.message}`);
+    }
+  }
+
+  async deleteImage(key: string): Promise<void> {
+    if (!key) {
       return;
     }
 

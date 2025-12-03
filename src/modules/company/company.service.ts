@@ -169,9 +169,9 @@ export class CompanyService {
       await this.s3Service.deleteImage(company.logo.public_id);
     }
 
-    const uploadResult = await this.s3Service.uploadImage(
+    const uploadResult = await this.s3Service.uploadCompanyImage(
       file,
-      'profile',
+      'logo',
       id,
     );
 
@@ -210,7 +210,7 @@ export class CompanyService {
       await this.s3Service.deleteImage(company.coverPic.public_id);
     }
 
-    const uploadResult = await this.s3Service.uploadImage(
+    const uploadResult = await this.s3Service.uploadCompanyImage(
       file,
       'cover',
       id,

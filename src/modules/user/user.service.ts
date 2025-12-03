@@ -170,7 +170,7 @@ export class UserService {
       await this.s3Service.deleteImage(oldKey);
     }
 
-    const uploadResult = await this.s3Service.uploadImage(
+    const uploadResult = await this.s3Service.uploadUserImage(
       file,
       "profile",
       userId
@@ -206,7 +206,7 @@ export class UserService {
       await this.s3Service.deleteImage(oldKey);
     }
 
-    const uploadResult = await this.s3Service.uploadImage(
+    const uploadResult = await this.s3Service.uploadUserImage(
       file,
       "cover",
       userId
