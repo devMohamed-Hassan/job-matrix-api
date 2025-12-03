@@ -9,14 +9,14 @@ import { CompanyRepository } from './company.repository';
 import { CreateCompanyDto } from './dtos/create-company.dto';
 import { UpdateCompanyDto } from './dtos/update-company.dto';
 import { CompanyDocument } from './entities/company.entity';
-import { CloudinaryService } from '../../common/services/cloudinary.service';
+import { S3Service } from '../../common/services/s3.service';
 import { Types } from 'mongoose';
 
 @Injectable()
 export class CompanyService {
   constructor(
     private readonly companyRepository: CompanyRepository,
-    private readonly cloudinaryService: CloudinaryService,
+    private readonly s3Service: S3Service,
   ) {}
 
   async create(
@@ -166,12 +166,13 @@ export class CompanyService {
     }
 
     if (company.logo?.public_id) {
-      await this.cloudinaryService.deleteFile(company.logo.public_id);
+      await this.s3Service.deleteImage(company.logo.public_id);
     }
 
-    const uploadResult = await this.cloudinaryService.uploadImage(
+    const uploadResult = await this.s3Service.uploadImage(
       file,
-      'companies/logos',
+      'profile',
+      id,
     );
 
     const updatedCompany = await this.companyRepository.update(id, {
@@ -206,12 +207,13 @@ export class CompanyService {
     }
 
     if (company.coverPic?.public_id) {
-      await this.cloudinaryService.deleteFile(company.coverPic.public_id);
+      await this.s3Service.deleteImage(company.coverPic.public_id);
     }
 
-    const uploadResult = await this.cloudinaryService.uploadImage(
+    const uploadResult = await this.s3Service.uploadImage(
       file,
-      'companies/covers',
+      'cover',
+      id,
     );
 
     const updatedCompany = await this.companyRepository.update(id, {
@@ -245,7 +247,7 @@ export class CompanyService {
       throw new BadRequestException('Company does not have a logo');
     }
 
-    await this.cloudinaryService.deleteFile(company.logo.public_id);
+    await this.s3Service.deleteImage(company.logo.public_id);
 
     await this.companyRepository.update(id, {
       logo: null,
@@ -269,7 +271,7 @@ export class CompanyService {
       throw new BadRequestException('Company does not have a cover picture');
     }
 
-    await this.cloudinaryService.deleteFile(company.coverPic.public_id);
+    await this.s3Service.deleteImage(company.coverPic.public_id);
 
     await this.companyRepository.update(id, {
       coverPic: null,
