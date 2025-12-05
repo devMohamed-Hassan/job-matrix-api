@@ -1,0 +1,84 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type AllDataResponse {
+  companies: [CompanyType!]!
+  users: [UserType!]!
+}
+
+type ApproveCompanyResponse {
+  company: CompanyType!
+  message: String!
+}
+
+type BanCompanyResponse {
+  company: CompanyType!
+  message: String!
+}
+
+type BanUserResponse {
+  message: String!
+  user: UserType!
+}
+
+type CompanyType {
+  HRs: [ID!]!
+  _id: ID!
+  address: String!
+  approvedByAdmin: Boolean!
+  bannedAt: DateTime
+  companyEmail: String!
+  companyName: String!
+  coverPic: ImageDataType
+  createdAt: DateTime!
+  createdBy: ID!
+  deletedAt: DateTime
+  description: String!
+  industry: String!
+  legalAttachment: ImageDataType
+  logo: ImageDataType
+  numberOfEmployees: String!
+  updatedAt: DateTime!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type ImageDataType {
+  public_id: String
+  secure_url: String
+}
+
+type Mutation {
+  approveCompany(companyId: String!): ApproveCompanyResponse!
+  banCompany(companyId: String!): BanCompanyResponse!
+  banUser(userId: String!): BanUserResponse!
+  unbanCompany(companyId: String!): BanCompanyResponse!
+  unbanUser(userId: String!): BanUserResponse!
+}
+
+type Query {
+  getAllData: AllDataResponse!
+}
+
+type UserType {
+  DOB: DateTime
+  _id: ID!
+  bannedAt: DateTime
+  coverPic: ImageDataType
+  createdAt: DateTime!
+  deletedAt: DateTime
+  email: String!
+  emailConfirmed: Boolean!
+  firstName: String!
+  gender: String
+  lastName: String!
+  mobileNumber: String
+  profilePic: ImageDataType
+  provider: String!
+  role: String!
+  updatedAt: DateTime!
+}

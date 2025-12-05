@@ -1,0 +1,78 @@
+# Example GraphQL query for getAllData
+# Since getAllData returns AllDataResponse (an object type), you must specify which fields to return
+
+query GetAllData {
+  getAllData {
+    users {
+      _id
+      firstName
+      lastName
+      email
+      provider
+      gender
+      DOB
+      mobileNumber
+      role
+      emailConfirmed
+      deletedAt
+      bannedAt
+      createdAt
+      updatedAt
+      profilePic {
+        secure_url
+        public_id
+      }
+      coverPic {
+        secure_url
+        public_id
+      }
+    }
+    companies {
+      _id
+      companyName
+      description
+      industry
+      address
+      numberOfEmployees
+      companyEmail
+      createdBy
+      HRs
+      approvedByAdmin
+      bannedAt
+      deletedAt
+      createdAt
+      updatedAt
+      logo {
+        secure_url
+        public_id
+      }
+      coverPic {
+        secure_url
+        public_id
+      }
+      legalAttachment {
+        secure_url
+        public_id
+      }
+    }
+  }
+}
+
+# Minimal query (only essential fields)
+query GetAllDataMinimal {
+  getAllData {
+    users {
+      _id
+      firstName
+      lastName
+      email
+      role
+    }
+    companies {
+      _id
+      companyName
+      companyEmail
+      approvedByAdmin
+    }
+  }
+}

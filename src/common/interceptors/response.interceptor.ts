@@ -18,9 +18,13 @@ export class ResponseInterceptor<T>
   implements NestInterceptor<T, UnifiedSuccessResponse<T>>
 {
   intercept(
-    _context: ExecutionContext,
+    context: ExecutionContext,
     next: CallHandler
   ): Observable<UnifiedSuccessResponse<T>> {
+    const request = context.switchToHttp().getRequest();
+    if (request && (request.path === '/graphql' || request.path?.startsWith('/graphql'))) {
+      return next.handle();
+    }
     return next.handle().pipe(
       map((response: any) => {
         if (

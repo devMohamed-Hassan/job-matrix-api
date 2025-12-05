@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import { Request, Response } from "express";
 import { Error as MongooseError } from "mongoose";
+import { GqlExecutionContext } from "@nestjs/graphql";
 
 export interface UnifiedErrorResponse {
   success: false;
@@ -20,9 +21,64 @@ export interface UnifiedErrorResponse {
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
+    let isGraphQLRequest = false;
+    try {
+      const gqlContext = GqlExecutionContext.create(host as any);
+      if (gqlContext) {
+        isGraphQLRequest = true;
+      }
+    } catch {
+    }
+
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+
+    if (!request || !response) {
+      return;
+    }
+
+    if (!isGraphQLRequest) {
+      isGraphQLRequest =
+        request?.path === '/graphql' ||
+        request?.path?.startsWith('/graphql') ||
+        (request?.headers?.['content-type']?.includes('application/json') &&
+          request?.body?.query !== undefined);
+    }
+
+    if (isGraphQLRequest) {
+      if (exception instanceof HttpException) {
+        const status = exception.getStatus();
+        const exceptionResponse = exception.getResponse();
+        const message =
+          typeof exceptionResponse === 'string'
+            ? exceptionResponse
+            : (exceptionResponse as any)?.message || exception.message;
+        response.status(status).json({
+          errors: [
+            {
+              message,
+              extensions: {
+                code: status,
+              },
+            },
+          ],
+        });
+        return;
+      }
+      response.status(500).json({
+        errors: [
+          {
+            message:
+              exception instanceof Error ? exception.message : 'Internal server error',
+            extensions: {
+              code: 'INTERNAL_SERVER_ERROR',
+            },
+          },
+        ],
+      });
+      return;
+    }
 
     const isDev = process.env.NODE_ENV === "development";
 

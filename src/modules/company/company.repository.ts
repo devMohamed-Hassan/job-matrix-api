@@ -84,5 +84,9 @@ export class CompanyRepository {
   async findAll(): Promise<CompanyDocument[]> {
     return this.companyModel.find({ deletedAt: null }).exec();
   }
+
+  async findAllIncludingDeleted(): Promise<CompanyDocument[]> {
+    return this.companyModel.find().exec();
+  }
 }
 

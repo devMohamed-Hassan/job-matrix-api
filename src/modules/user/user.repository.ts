@@ -41,6 +41,10 @@ export class UserRepository {
   }
 
   async findAll(): Promise<UserDocument[]> {
+    return this.userModel.find({ deletedAt: null }).exec();
+  }
+
+  async findAllIncludingDeleted(): Promise<UserDocument[]> {
     return this.userModel.find().exec();
   }
 
