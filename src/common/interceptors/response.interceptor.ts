@@ -14,24 +14,31 @@ export interface UnifiedSuccessResponse<T = unknown> {
 }
 
 @Injectable()
-export class ResponseInterceptor<T>
-  implements NestInterceptor<T, UnifiedSuccessResponse<T>>
-{
+export class ResponseInterceptor<T> implements NestInterceptor<
+  T,
+  UnifiedSuccessResponse<T>
+> {
   intercept(
     context: ExecutionContext,
     next: CallHandler
   ): Observable<UnifiedSuccessResponse<T>> {
+    if (typeof context.getType === "function") {
+      const ctxType = context.getType() as unknown as string;
+      if (ctxType === "graphql") {
+        return next.handle();
+      }
+    }
+
     const request = context.switchToHttp().getRequest();
-    if (request && (request.path === '/graphql' || request.path?.startsWith('/graphql'))) {
+    if (
+      request &&
+      (request.path === "/graphql" || request.path?.startsWith("/graphql"))
+    ) {
       return next.handle();
     }
     return next.handle().pipe(
       map((response: any) => {
-        if (
-          response &&
-          typeof response === "object" &&
-          "success" in response
-        ) {
+        if (response && typeof response === "object" && "success" in response) {
           return response;
         }
 
@@ -62,5 +69,3 @@ export class ResponseInterceptor<T>
     );
   }
 }
-
-

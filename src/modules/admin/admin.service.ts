@@ -5,13 +5,14 @@ import {
 } from "@nestjs/common";
 import { UserRepository } from "../user/user.repository";
 import { CompanyRepository } from "../company/company.repository";
-import { UserDocument } from "../user/entities/user.entity";
-import { CompanyDocument } from "../company/entities/company.entity";
 import {
   AllDataResponse,
   BanUserResponse,
   BanCompanyResponse,
   ApproveCompanyResponse,
+  UserType,
+  CompanyType,
+  ImageDataType,
 } from "./graphql/admin.graphql.types";
 
 @Injectable()
@@ -21,139 +22,88 @@ export class AdminService {
     private readonly companyRepository: CompanyRepository
   ) {}
 
+  private mapImageData(image: any): ImageDataType | null {
+    if (!image) return null;
+    return {
+      secure_url: image.secure_url,
+      public_id: image.public_id,
+    };
+  }
+
+  private serializeDate(date: any): Date | null {
+    if (!date) return null;
+    return date instanceof Date ? date : new Date(date);
+  }
+
+  private mapUserToType(userObj: any): UserType {
+    return {
+      _id: userObj._id.toString(),
+      firstName: userObj.firstName,
+      lastName: userObj.lastName,
+      email: userObj.email,
+      provider: userObj.provider,
+      gender: userObj.gender || null,
+      DOB: userObj.DOB ? this.serializeDate(userObj.DOB) : null,
+      mobileNumber: userObj.mobileNumber || null,
+      role: userObj.role,
+      emailConfirmed: userObj.emailConfirmed,
+      deletedAt: userObj.deletedAt
+        ? this.serializeDate(userObj.deletedAt)
+        : null,
+      bannedAt: userObj.bannedAt ? this.serializeDate(userObj.bannedAt) : null,
+      profilePic: this.mapImageData(userObj.profilePic),
+      coverPic: this.mapImageData(userObj.coverPic),
+      createdAt: this.serializeDate(userObj.createdAt),
+      updatedAt: this.serializeDate(userObj.updatedAt),
+    };
+  }
+
+  private mapCompanyToType(companyObj: any): CompanyType {
+    return {
+      _id: companyObj._id.toString(),
+      companyName: companyObj.companyName,
+      description: companyObj.description,
+      industry: companyObj.industry,
+      address: companyObj.address,
+      numberOfEmployees: companyObj.numberOfEmployees,
+      companyEmail: companyObj.companyEmail,
+      createdBy: companyObj.createdBy.toString(),
+      logo: this.mapImageData(companyObj.logo),
+      coverPic: this.mapImageData(companyObj.coverPic),
+      HRs: companyObj.HRs.map((hr: any) => hr.toString()),
+      bannedAt: companyObj.bannedAt
+        ? this.serializeDate(companyObj.bannedAt)
+        : null,
+      deletedAt: companyObj.deletedAt
+        ? this.serializeDate(companyObj.deletedAt)
+        : null,
+      legalAttachment: this.mapImageData(companyObj.legalAttachment),
+      approvedByAdmin: companyObj.approvedByAdmin,
+      createdAt: this.serializeDate(companyObj.createdAt),
+      updatedAt: this.serializeDate(companyObj.updatedAt),
+    };
+  }
+
   async getAllData(): Promise<AllDataResponse> {
-    try {
-      console.log("[getAllData] Starting data fetch...");
+    const users = await this.userRepository.findAllIncludingDeleted();
+    const companies = await this.companyRepository.findAllIncludingDeleted();
 
-      let users = await this.userRepository.findAllIncludingDeleted();
-      users = await Promise.resolve(users);
-      if (!Array.isArray(users)) {
-        console.warn(
-          "[getAllData] users is not an array after await, converting:",
-          typeof users,
-          users
-        );
-        users = users == null ? [] : [users];
-      }
-      console.log(
-        "[getAllData] Users fetched:",
-        Array.isArray(users) ? users.length : "NOT AN ARRAY",
-        typeof users
-      );
+    // Map users to match GraphQL schema exactly - only include defined fields
+    const transformedUsers: UserType[] = users.map((user) => {
+      const userObj = user.toObject();
+      return this.mapUserToType(userObj);
+    });
 
-      let companies = await this.companyRepository.findAllIncludingDeleted();
-      companies = await Promise.resolve(companies);
-      if (!Array.isArray(companies)) {
-        console.warn(
-          "[getAllData] companies is not an array after await, converting:",
-          typeof companies,
-          companies
-        );
-        companies = companies == null ? [] : [companies];
-      }
-      console.log(
-        "[getAllData] Companies fetched:",
-        Array.isArray(companies) ? companies.length : "NOT AN ARRAY",
-        typeof companies
-      );
+    // Map companies to match GraphQL schema exactly - only include defined fields
+    const transformedCompanies: CompanyType[] = companies.map((company) => {
+      const companyObj = company.toObject();
+      return this.mapCompanyToType(companyObj);
+    });
 
-      let transformedUsers: any[] = [];
-      if (Array.isArray(users)) {
-        transformedUsers = users
-          .filter((user) => user != null)
-          .map((user) => {
-            try {
-              const userObj = user.toObject();
-              delete userObj.password;
-              delete userObj.refreshTokenHash;
-              delete userObj.otp;
-              return userObj;
-            } catch (error) {
-              console.error("Error transforming user:", error);
-              return null;
-            }
-          })
-          .filter((user) => user != null);
-      } else {
-        console.warn(
-          "[getAllData] users is not an array:",
-          typeof users,
-          users
-        );
-        transformedUsers = [];
-      }
-
-      let transformedCompanies: any[] = [];
-      if (Array.isArray(companies)) {
-        transformedCompanies = companies
-          .filter((company) => company != null)
-          .map((company) => {
-            try {
-              return company.toObject ? company.toObject() : company;
-            } catch (error) {
-              console.error("Error transforming company:", error);
-              return null;
-            }
-          })
-          .filter((company) => company != null);
-      } else {
-        console.warn(
-          "[getAllData] companies is not an array:",
-          typeof companies,
-          companies
-        );
-        transformedCompanies = [];
-      }
-
-      const finalUsers = Array.isArray(transformedUsers)
-        ? [...transformedUsers]
-        : [];
-      const finalCompanies = Array.isArray(transformedCompanies)
-        ? [...transformedCompanies]
-        : [];
-
-      if (finalUsers === null || finalUsers === undefined) {
-        console.error("[getAllData] CRITICAL: finalUsers is null/undefined");
-        throw new Error("finalUsers cannot be null");
-      }
-      if (finalCompanies === null || finalCompanies === undefined) {
-        console.error(
-          "[getAllData] CRITICAL: finalCompanies is null/undefined"
-        );
-        throw new Error("finalCompanies cannot be null");
-      }
-
-      const result: AllDataResponse = {
-        users: finalUsers as any,
-        companies: finalCompanies as any,
-      };
-
-      console.log(
-        "[getAllData] Returning result with",
-        result.users.length,
-        "users and",
-        result.companies.length,
-        "companies"
-      );
-      console.log(
-        "[getAllData] Result type check - users is array:",
-        Array.isArray(result.users),
-        "companies is array:",
-        Array.isArray(result.companies)
-      );
-
-      return result;
-    } catch (error) {
-      console.error("[getAllData] Error caught:", error);
-      console.error(
-        "[getAllData] Error stack:",
-        error instanceof Error ? error.stack : "No stack trace"
-      );
-      return {
-        users: [],
-        companies: [],
-      };
-    }
+    return {
+      users: transformedUsers,
+      companies: transformedCompanies,
+    };
   }
 
   async banUser(userId: string, adminId: string): Promise<BanUserResponse> {
@@ -176,12 +126,10 @@ export class AdminService {
     }
 
     const userObj = updatedUser.toObject();
-    delete userObj.password;
-    delete userObj.refreshTokenHash;
-    delete userObj.otp;
+    const mappedUser: UserType = this.mapUserToType(userObj);
 
     return {
-      user: userObj as any,
+      user: mappedUser,
       message: "User has been banned successfully",
     };
   }
@@ -206,12 +154,10 @@ export class AdminService {
     }
 
     const userObj = updatedUser.toObject();
-    delete userObj.password;
-    delete userObj.refreshTokenHash;
-    delete userObj.otp;
+    const mappedUser: UserType = this.mapUserToType(userObj);
 
     return {
-      user: userObj as any,
+      user: mappedUser,
       message: "User has been unbanned successfully",
     };
   }
@@ -238,8 +184,11 @@ export class AdminService {
       throw new NotFoundException(`Company with ID ${companyId} not found`);
     }
 
+    const companyObj = updatedCompany.toObject();
+    const mappedCompany: CompanyType = this.mapCompanyToType(companyObj);
+
     return {
-      company: updatedCompany as any,
+      company: mappedCompany,
       message: "Company has been banned successfully",
     };
   }
@@ -266,8 +215,11 @@ export class AdminService {
       throw new NotFoundException(`Company with ID ${companyId} not found`);
     }
 
+    const companyObj = updatedCompany.toObject();
+    const mappedCompany: CompanyType = this.mapCompanyToType(companyObj);
+
     return {
-      company: updatedCompany as any,
+      company: mappedCompany,
       message: "Company has been unbanned successfully",
     };
   }
@@ -294,8 +246,11 @@ export class AdminService {
       throw new NotFoundException(`Company with ID ${companyId} not found`);
     }
 
+    const companyObj = updatedCompany.toObject();
+    const mappedCompany: CompanyType = this.mapCompanyToType(companyObj);
+
     return {
-      company: updatedCompany as any,
+      company: mappedCompany,
       message: "Company has been approved successfully",
     };
   }
