@@ -4,6 +4,7 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { GraphQLModule } from "@nestjs/graphql";
 import { ApolloDriver, ApolloDriverConfig } from "@nestjs/apollo";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { ScheduleModule } from "@nestjs/schedule";
 import { APP_GUARD } from "@nestjs/core";
 import { join } from "path";
 import envConfig from "./config/env.config";
@@ -17,6 +18,7 @@ import { ChatModule } from "./modules/chat/chat.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { AssetsModule } from "./modules/assets/assets.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
+import { OtpCleanupModule } from "./modules/otp-cleanup/otp-cleanup.module";
 
 @Module({
   imports: [
@@ -35,6 +37,7 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
         },
       ],
     }),
+    ScheduleModule.forRoot(),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: getDatabaseConfig,
@@ -59,6 +62,7 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
     AdminModule,
     AssetsModule,
     NotificationsModule,
+    OtpCleanupModule,
   ],
   controllers: [],
   providers: [

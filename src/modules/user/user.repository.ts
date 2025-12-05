@@ -63,5 +63,14 @@ export class UserRepository {
       { new: true },
     ).exec();
   }
+
+  async deleteExpiredOtps(): Promise<number> {
+    const now = new Date();
+    const result = await this.userModel.updateMany(
+      { 'otp.expiresAt': { $lt: now } },
+      { $pull: { otp: { expiresAt: { $lt: now } } } },
+    ).exec();
+    return result.modifiedCount;
+  }
 }
 
