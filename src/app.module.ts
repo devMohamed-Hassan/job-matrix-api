@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { MongooseModule } from "@nestjs/mongoose";
 import { GraphQLModule } from "@nestjs/graphql";
 import { ApolloDriver, ApolloDriverConfig } from "@nestjs/apollo";
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { APP_GUARD } from "@nestjs/core";
 import { join } from "path";
 import envConfig from "./config/env.config";
 import { getDatabaseConfig } from "./config/database.config";
@@ -22,6 +24,16 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
       isGlobal: true,
       load: [envConfig],
       envFilePath: ".env",
+    }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => [
+        {
+          ttl: 60000,
+          limit: 100,
+        },
+      ],
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
@@ -49,6 +61,11 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
     NotificationsModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

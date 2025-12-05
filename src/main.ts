@@ -6,12 +6,17 @@ import { getConnectionToken } from "@nestjs/mongoose";
 import { Connection } from "mongoose";
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
+import helmet from "helmet";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
   const port = configService.get<number>("port") || 5000;
+  const clientUrl =
+    configService.get<string>("clientUrl") || "http://localhost:3000";
+
+  app.use(helmet());
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -24,7 +29,12 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  app.enableCors();
+  app.enableCors({
+    origin: clientUrl,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  });
 
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}`);
