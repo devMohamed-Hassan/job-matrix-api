@@ -88,13 +88,11 @@ export class AdminService {
     const users = await this.userRepository.findAllIncludingDeleted();
     const companies = await this.companyRepository.findAllIncludingDeleted();
 
-    // Map users to match GraphQL schema exactly - only include defined fields
     const transformedUsers: UserType[] = users.map((user) => {
       const userObj = user.toObject();
       return this.mapUserToType(userObj);
     });
 
-    // Map companies to match GraphQL schema exactly - only include defined fields
     const transformedCompanies: CompanyType[] = companies.map((company) => {
       const companyObj = company.toObject();
       return this.mapCompanyToType(companyObj);

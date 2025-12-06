@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { MongooseModule } from "@nestjs/mongoose";
 import { GraphQLModule } from "@nestjs/graphql";
 import { ApolloDriver, ApolloDriverConfig } from "@nestjs/apollo";
-import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { ScheduleModule } from "@nestjs/schedule";
 import { APP_GUARD } from "@nestjs/core";
 import { join } from "path";
@@ -19,6 +19,7 @@ import { AdminModule } from "./modules/admin/admin.module";
 import { AssetsModule } from "./modules/assets/assets.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { OtpCleanupModule } from "./modules/otp-cleanup/otp-cleanup.module";
+import { GqlThrottlerGuard } from "./common/guards/gql-throttler.guard";
 
 @Module({
   imports: [
@@ -47,7 +48,7 @@ import { OtpCleanupModule } from "./modules/otp-cleanup/otp-cleanup.module";
       driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), "src/schema.gql"),
       sortSchema: true,
-      context: ({ req }) => ({ req }),
+      context: ({ req, res }) => ({ req, res }),
       playground: true,
       introspection: true,
       path: "/graphql",
@@ -68,7 +69,7 @@ import { OtpCleanupModule } from "./modules/otp-cleanup/otp-cleanup.module";
   providers: [
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: GqlThrottlerGuard,
     },
   ],
 })
