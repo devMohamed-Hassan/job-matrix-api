@@ -25,6 +25,37 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+```env
+NODE_ENV=development
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/job-matrix
+CLIENT_URL=http://localhost:3000
+API_URL=http://localhost:5000
+
+# JWT Secrets
+ACCESS_TOKEN_SECRET=your_super_secret_access_token_key_here
+REFRESH_TOKEN_SECRET=your_super_secret_refresh_token_key_here
+
+# Encryption
+CRYPTO_KEY=your_32_character_crypto_key_12
+SALT_ROUNDS=10
+
+# Email Configuration
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASS=your-app-password
+
+# AWS S3
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your_aws_access_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+AWS_S3_BUCKET_NAME=job-matrix-uploads
+
+# WebSocket
+SOCKET_PORT=5001
+```
+
 ## Project setup
 
 ```bash
