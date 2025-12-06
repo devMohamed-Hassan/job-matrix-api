@@ -11,7 +11,10 @@ import { UserRepository } from "../user/user.repository";
 import { S3Service } from "../../common/services/s3.service";
 import { EmailService } from "../email/email.service";
 import { NotificationsGateway } from "../notifications/notifications.gateway";
-import { ApplicationDocument, ApplicationStatus } from "./entities/application.entity";
+import {
+  ApplicationDocument,
+  ApplicationStatus,
+} from "./entities/application.entity";
 import { UpdateApplicationStatusDto } from "./dtos/update-application-status.dto";
 import {
   PaginationResult,
@@ -28,13 +31,13 @@ export class ApplicationService {
     private readonly userRepository: UserRepository,
     private readonly s3Service: S3Service,
     private readonly emailService: EmailService,
-    private readonly notificationsGateway: NotificationsGateway,
+    private readonly notificationsGateway: NotificationsGateway
   ) {}
 
   async applyToJob(
     jobId: string,
     userId: string,
-    cvFile: Express.Multer.File,
+    cvFile: Express.Multer.File
   ): Promise<ApplicationDocument> {
     const job = await this.jobRepository.findById(jobId);
     if (!job) {
@@ -48,15 +51,10 @@ export class ApplicationService {
     const existingApplication =
       await this.applicationRepository.findByUserIdAndJobId(userId, jobId);
     if (existingApplication) {
-      throw new ConflictException(
-        "You have already applied to this job",
-      );
+      throw new ConflictException("You have already applied to this job");
     }
 
-    const cvUploadResult = await this.s3Service.uploadCV(
-      cvFile,
-      `cv/${jobId}`,
-    );
+    const cvUploadResult = await this.s3Service.uploadCV(cvFile, "cv", userId);
 
     const applicationData = {
       jobId: new Types.ObjectId(jobId),
@@ -68,21 +66,24 @@ export class ApplicationService {
       status: ApplicationStatus.PENDING,
     };
 
-    const application = await this.applicationRepository.create(applicationData);
+    const application =
+      await this.applicationRepository.create(applicationData);
 
     const populatedApplication = await this.applicationRepository.findById(
-      application._id.toString(),
+      application._id.toString()
     );
 
-    const companyId = 
-      job.companyId && typeof job.companyId === 'object' && '_id' in job.companyId
+    const companyId =
+      job.companyId &&
+      typeof job.companyId === "object" &&
+      "_id" in job.companyId
         ? (job.companyId as any)._id.toString()
         : job.companyId.toString();
 
     if (populatedApplication) {
       const populatedUserId = populatedApplication.userId as any;
       const applicationDoc = populatedApplication as any;
-      
+
       this.notificationsGateway.emitNewApplication(companyId, {
         applicationId: populatedApplication._id.toString(),
         jobId: jobId,
@@ -102,7 +103,7 @@ export class ApplicationService {
   async getApplicationsForJob(
     jobId: string,
     filters: any = {},
-    pagination: any = {},
+    pagination: any = {}
   ): Promise<PaginationResult<ApplicationDocument>> {
     const job = await this.jobRepository.findById(jobId);
     if (!job) {
@@ -115,7 +116,7 @@ export class ApplicationService {
     const paginationMeta = calculatePagination(
       total,
       pagination.skip || 0,
-      pagination.limit || 10,
+      pagination.limit || 10
     );
 
     return {
@@ -126,23 +127,24 @@ export class ApplicationService {
 
   async updateApplicationStatus(
     applicationId: string,
-    updateStatusDto: UpdateApplicationStatusDto,
+    updateStatusDto: UpdateApplicationStatusDto
   ): Promise<ApplicationDocument> {
-    const application = await this.applicationRepository.findById(applicationId);
+    const application =
+      await this.applicationRepository.findById(applicationId);
     if (!application) {
       throw new NotFoundException(
-        `Application with ID ${applicationId} not found`,
+        `Application with ID ${applicationId} not found`
       );
     }
 
     const updatedApplication = await this.applicationRepository.update(
       applicationId,
-      { status: updateStatusDto.status },
+      { status: updateStatusDto.status }
     );
 
     if (!updatedApplication) {
       throw new NotFoundException(
-        `Application with ID ${applicationId} not found`,
+        `Application with ID ${applicationId} not found`
       );
     }
 
@@ -152,49 +154,47 @@ export class ApplicationService {
     ) {
       const applicant = updatedApplication.userId as any;
       const job = updatedApplication.jobId as any;
-      
+
       if (!job.companyId) {
-        throw new NotFoundException('Company ID not found for this job');
+        throw new NotFoundException("Company ID not found for this job");
       }
-      
+
       let companyId: string;
       const companyIdValue = job.companyId as any;
-      
-      if (companyIdValue && typeof companyIdValue === 'object') {
+
+      if (companyIdValue && typeof companyIdValue === "object") {
         if (companyIdValue._id) {
           companyId = companyIdValue._id.toString();
-        } else if (companyIdValue.id && typeof companyIdValue.id === 'string') {
+        } else if (companyIdValue.id && typeof companyIdValue.id === "string") {
           companyId = companyIdValue.id;
         } else if (Types.ObjectId.isValid(companyIdValue)) {
           companyId = companyIdValue.toString();
         } else {
-          throw new NotFoundException('Invalid company ID format');
+          throw new NotFoundException("Invalid company ID format");
         }
-      } else if (typeof companyIdValue === 'string') {
+      } else if (typeof companyIdValue === "string") {
         companyId = companyIdValue;
       } else {
-        throw new NotFoundException('Invalid company ID format');
+        throw new NotFoundException("Invalid company ID format");
       }
-      
-      const company = await this.companyRepository.findByIdExcludingDeleted(
-        companyId,
-      );
-      
+
+      const company =
+        await this.companyRepository.findByIdExcludingDeleted(companyId);
 
       if (applicant && applicant.email && job && company) {
         try {
           await this.emailService.sendApplicationStatusEmail({
             to: applicant.email,
             applicantName: `${applicant.firstName} ${applicant.lastName}`,
-            jobTitle: job.jobTitle || 'the position',
+            jobTitle: job.jobTitle || "the position",
             companyName: company.companyName,
             status:
               updateStatusDto.status === ApplicationStatus.ACCEPTED
-                ? 'accepted'
-                : 'rejected',
+                ? "accepted"
+                : "rejected",
           });
         } catch (error) {
-          console.error('Failed to send application status email:', error);
+          console.error("Failed to send application status email:", error);
         }
       }
     }

@@ -20,11 +20,6 @@ export default () => ({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     s3BucketName: process.env.AWS_S3_BUCKET_NAME,
   },
-  cloudinary: {
-    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-    apiKey: process.env.CLOUDINARY_API_KEY,
-    apiSecret: process.env.CLOUDINARY_API_SECRET,
-  },
   socketPort: Number(process.env.SOCKET_PORT || "5001"),
   cryptoKey: process.env.CRYPTO_KEY || "default_32_character_crypto_key_1234",
   mongoAtlsUri: process.env.MONGO_ATLS_URI,

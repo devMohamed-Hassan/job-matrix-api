@@ -178,6 +178,7 @@ export class S3Service {
   async uploadCV(
     file: Express.Multer.File,
     folder: string = "cv",
+    userId: string
   ): Promise<S3UploadResult> {
     if (!file) {
       throw new BadRequestException("No file provided");
@@ -199,7 +200,7 @@ export class S3Service {
       const timestamp = Date.now();
       const randomString = Math.random().toString(36).substring(2, 15);
       const fileName = `cv-${timestamp}-${randomString}${fileExtension}`;
-      const key = `${folder}/${fileName}`;
+      const key = `users/${userId}/${folder}/${fileName}`;
 
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
