@@ -13,6 +13,7 @@ import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { GoogleAuthDto } from './dtos/google-auth.dto';
 import { RefreshTokenDto } from './dtos/refresh-token.dto';
+import { RefreshToken } from '../../common/decorators/refresh-token.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -62,7 +63,7 @@ export class AuthController {
 
   @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
-  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
-    return await this.authService.refreshToken(refreshTokenDto);
+  async refreshToken(@RefreshToken() token: string) {
+    return await this.authService.refreshToken({ refreshToken: token });
   }
 }
